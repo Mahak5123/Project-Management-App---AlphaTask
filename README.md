@@ -69,12 +69,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 3. Add team members (only available to the creator)
 4. Manage your projects and tasks from the dashboard
 
-## Development Mode
 
-For development without a configured database:
-- Register with any email/name to get a passcode
-- Login with email: `test@example.com` and passcode: `test`
 
-## License
 
-[MIT](LICENSE)
