@@ -24,3 +24,10 @@ A Jira-like project management application with a custom passcode authentication
 ```bash
 git clone <repository-url>
 cd AlphaTask
+
+### 2. Install dependencies
+
+```bash
+npm install
+
+
