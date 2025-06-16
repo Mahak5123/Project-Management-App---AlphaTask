@@ -1,6 +1,11 @@
 # AlphaTask
 A Jira-like project management application with a custom passcode authentication system.
 
+## 🚀 Live Demo
+**[Click to View Live Application ](https://project-management-app-alpha-task-dx4fhymkw.vercel.app/)**
+
+
+
 ## Features
 - **Passcode Authentication**: Users register with email and name, and receive a generated passcode  
 - **Project Management**: Create and manage projects with tasks  
@@ -50,3 +55,13 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Deployment
+
+### Deploy to Vercel
+1. Push your code to GitHub
+2. Connect your repository to [Vercel](https://vercel.com)
+3. Add your environment variables in Vercel dashboard
+4. Deploy!
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Mahak5123/Project-Management-App---AlphaTask)
