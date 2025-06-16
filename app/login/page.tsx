@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -19,7 +18,6 @@ export default function Login() {
   const [error, setError] = useState("")
   const router = useRouter()
 
-  // Update the handleSubmit function to handle errors better
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -30,69 +28,37 @@ export default function Login() {
         throw new Error("Email and passcode are required")
       }
 
-      try {
-        const supabase = createClient()
+      const supabase = createClient()
 
-        // Check if user exists with this email and passcode
-        const { data, error: fetchError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("email", email)
-          .eq("passcode", passcode)
-          .single()
+      const { data, error: fetchError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email)
+        .eq("passcode", passcode)
+        .single()
 
-        if (fetchError || !data) {
-          // For development without a database, allow a test login
-          if (process.env.NODE_ENV === "development" && email === "test@example.com" && passcode === "test") {
-            localStorage.setItem(
-              "user",
-              JSON.stringify({
-                id: "test-user-id",
-                name: "Test User",
-                email: "test@example.com",
-                isCreator: true,
-              }),
-            )
-            router.push("/dashboard")
-            return
-          }
-
-          throw new Error("Invalid email or passcode")
-        }
-
-        // Store user info in local storage
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            id: data.id,
-            name: data.name,
-            email: data.email,
-            isCreator: data.is_creator,
-          }),
-        )
-
-        // Redirect to dashboard
-        router.push("/dashboard")
-      } catch (dbError: any) {
-        console.error("Database error:", dbError)
-
-        // For development without a database, allow a test login
+      if (fetchError || !data) {
         if (process.env.NODE_ENV === "development" && email === "test@example.com" && passcode === "test") {
-          localStorage.setItem(
-            "user",
-            JSON.stringify({
-              id: "test-user-id",
-              name: "Test User",
-              email: "test@example.com",
-              isCreator: true,
-            }),
-          )
+          localStorage.setItem("user", JSON.stringify({
+            id: "test-user-id",
+            name: "Test User",
+            email: "test@example.com",
+            isCreator: true,
+          }))
           router.push("/dashboard")
           return
         }
-
-        throw new Error("Failed to connect to the database. Please check your configuration.")
+        throw new Error("Invalid email or passcode")
       }
+
+      localStorage.setItem("user", JSON.stringify({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        isCreator: data.is_creator,
+      }))
+
+      router.push("/dashboard")
     } catch (err: any) {
       console.error("Login error:", err)
       setError(err.message || "Failed to login. Please check your credentials.")
@@ -102,18 +68,18 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f172a] to-[#1e293b] p-4">
+      <Card className="w-full max-w-md shadow-2xl bg-white/10 backdrop-blur-md border border-white/10">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-2">
-            <span className="text-2xl font-bold text-orange-500">Project</span>
-            <span className="text-2xl font-bold text-blue-500">Pilot</span>
+          <div className="flex items-center justify-center mb-4">
+            <h1 className="text-3xl font-extrabold text-[#22d3ee]">AlphaTask</h1>
           </div>
-          <CardTitle className="text-2xl text-center">Login</CardTitle>
-          <CardDescription className="text-center">
-            Enter your email and passcode to access your account
+          <CardTitle className="text-2xl text-center text-slate-100">Welcome Back</CardTitle>
+          <CardDescription className="text-center text-slate-400">
+            Enter your email and passcode to sign in
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
@@ -122,7 +88,7 @@ export default function Login() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-slate-100">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -133,7 +99,7 @@ export default function Login() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="passcode">Passcode</Label>
+              <Label htmlFor="passcode" className="text-slate-100">Passcode</Label>
               <Input
                 id="passcode"
                 type="password"
@@ -143,15 +109,16 @@ export default function Login() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full bg-[#22d3ee] text-black hover:bg-[#0ec2da]" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </Button>
           </form>
         </CardContent>
+
         <CardFooter className="flex justify-center">
-          <div className="text-sm text-gray-500">
-            Don't have an account?{" "}
-            <Link href="/register" className="text-blue-500 hover:underline">
+          <div className="text-sm text-slate-400">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="text-[#22d3ee] hover:underline">
               Register
             </Link>
           </div>

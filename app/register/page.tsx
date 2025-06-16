@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -32,54 +31,37 @@ export default function Register() {
         throw new Error("Name and email are required")
       }
 
-      // Generate a passcode
       const newPasscode = generatePasscode()
       setPasscode(newPasscode)
 
-      try {
-        console.log("Creating Supabase client...")
-        const supabase = createClient()
-        console.log("Supabase client created successfully")
+      const supabase = createClient()
 
-        // Check if this is the first user (creator)
-        console.log("Checking for existing users...")
-        const { data: existingUsers, error: countError } = await supabase.from("users").select("count").single()
+      const { data: existingUsers, error: countError } = await supabase.from("users").select("count").single()
 
-        if (countError) {
-          console.error("Error checking existing users:", countError)
-          throw countError
-        }
-
-        console.log("Existing users check result:", existingUsers)
-        const isCreator = !existingUsers || existingUsers.count === 0
-
-        // Insert the new user
-        console.log("Inserting new user:", { name, email, isCreator })
-        const { error: insertError, data: insertData } = await supabase
-          .from("users")
-          .insert([
-            {
-              name,
-              email,
-              passcode: newPasscode,
-              is_creator: isCreator,
-            },
-          ])
-          .select()
-
-        if (insertError) {
-          console.error("Error inserting user:", insertError)
-          throw insertError
-        }
-
-        console.log("User inserted successfully:", insertData)
-        setSuccess(true)
-      } catch (dbError: any) {
-        console.error("Database error:", dbError)
-        throw new Error(`Database error: ${dbError.message || "Unknown error"}`)
+      if (countError) {
+        throw countError
       }
+
+      const isCreator = !existingUsers || existingUsers.count === 0
+
+      const { error: insertError, data: insertData } = await supabase
+        .from("users")
+        .insert([
+          {
+            name,
+            email,
+            passcode: newPasscode,
+            is_creator: isCreator,
+          },
+        ])
+        .select()
+
+      if (insertError) {
+        throw insertError
+      }
+
+      setSuccess(true)
     } catch (err: any) {
-      console.error("Registration error:", err)
       setError(err.message || "Failed to register. Please try again.")
     } finally {
       setLoading(false)
@@ -87,31 +69,33 @@ export default function Register() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f172a] to-[#1e293b] p-4">
+      <Card className="w-full max-w-md shadow-2xl bg-white/10 backdrop-blur-md border border-white/10">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-2">
-            <span className="text-2xl font-bold text-orange-500">Project</span>
-            <span className="text-2xl font-bold text-blue-500">Pilot</span>
+          <div className="flex items-center justify-center mb-4">
+            <h1 className="text-3xl font-extrabold text-[#22d3ee]">AlphaTask</h1>
           </div>
-          <CardTitle className="text-2xl text-center">Create an account</CardTitle>
-          <CardDescription className="text-center">Enter your information to get started</CardDescription>
+          <CardTitle className="text-2xl text-center text-slate-100">Create an account</CardTitle>
+          <CardDescription className="text-center text-slate-400">
+            Enter your information to get started
+          </CardDescription>
         </CardHeader>
+
         <CardContent>
           {success ? (
             <div className="space-y-4">
-              <Alert className="bg-green-50 border-green-200">
-                <AlertDescription className="text-green-800">
+              <Alert className="bg-green-50/10 border-green-200/20">
+                <AlertDescription className="text-green-400">
                   Account created successfully! Your passcode is:
                 </AlertDescription>
               </Alert>
-              <div className="p-4 bg-gray-100 rounded-md text-center">
+              <div className="p-4 bg-white/10 rounded-md text-center text-slate-100">
                 <p className="text-2xl font-mono tracking-wider">{passcode}</p>
               </div>
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-slate-400 text-center">
                 Please save this passcode. You will need it to log in.
               </p>
-              <Button className="w-full" onClick={() => router.push("/login")}>
+              <Button className="w-full bg-[#22d3ee] text-black hover:bg-[#0ec2da]" onClick={() => router.push("/login")}>
                 Continue to Login
               </Button>
             </div>
@@ -123,7 +107,7 @@ export default function Register() {
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name" className="text-slate-100">Full Name</Label>
                 <Input
                   id="name"
                   placeholder="Enter your name"
@@ -133,7 +117,7 @@ export default function Register() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-slate-100">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -143,17 +127,18 @@ export default function Register() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-[#22d3ee] text-black hover:bg-[#0ec2da]" disabled={loading}>
                 {loading ? "Creating Account..." : "Register"}
               </Button>
             </form>
           )}
         </CardContent>
+
         {!success && (
           <CardFooter className="flex justify-center">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-slate-400">
               Already have an account?{" "}
-              <Link href="/login" className="text-blue-500 hover:underline">
+              <Link href="/login" className="text-[#22d3ee] hover:underline">
                 Login
               </Link>
             </div>

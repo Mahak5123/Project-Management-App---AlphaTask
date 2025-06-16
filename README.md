@@ -1,4 +1,4 @@
-# ProjectPilot
+# AlphaTask
 
 A Jira-like project management application with a custom passcode authentication system.
 
@@ -23,7 +23,7 @@ A Jira-like project management application with a custom passcode authentication
 
 \`\`\`bash
 git clone <repository-url>
-cd projectpilot
+cd AlphaTask
 \`\`\`
 
 ### 2. Install dependencies

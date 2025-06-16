@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "ProjectPilot",
+  title: "AlphaTask",
   description: "Project management made simple",
     generator: 'v0.dev'
 }

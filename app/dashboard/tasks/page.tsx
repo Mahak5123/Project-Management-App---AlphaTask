@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
+import { PlusCircle, CheckCircle2, Clock, AlertCircle, Calendar, User } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { createClient } from "@/lib/supabase/client"
-import { PlusCircle, CheckCircle2, Clock, AlertCircle, Calendar, User } from "lucide-react"
 
 interface Task {
   id: string
@@ -18,20 +18,19 @@ interface Task {
   project_id: string
   assigned_to: string | null
   created_at: string
-  project: {
-    name: string
-    id: string
-  }
-  assigned_user?: {
-    name: string
-    email: string
-  }
+  project: { name: string; id: string }
+  assigned_user?: { name: string; email: string }
+}
+
+interface UserType {
+  id: string
+  isCreator: boolean
 }
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<{ id: string; isCreator: boolean } | null>(null)
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null)
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -39,63 +38,28 @@ export default function TasksPage() {
         const userData = localStorage.getItem("user")
         if (!userData) return
 
-        const user = JSON.parse(userData)
+        const user: UserType = JSON.parse(userData)
         setCurrentUser(user)
 
         const supabase = createClient()
 
-        let tasksQuery
+        const projectIds = user.isCreator
+          ? (await supabase.from("projects").select("id").eq("created_by", user.id)).data?.map(p => p.id) || []
+          : (await supabase.from("project_members").select("project_id").eq("user_id", user.id)).data?.map(mp => mp.project_id) || []
 
-        if (user.isCreator) {
-          // If user is creator, fetch all tasks from their projects
-          const { data: userProjects } = await supabase.from("projects").select("id").eq("created_by", user.id)
-
-          if (userProjects && userProjects.length > 0) {
-            const projectIds = userProjects.map((p) => p.id)
-
-            tasksQuery = supabase
-              .from("tasks")
-              .select(`
-                *,
-                project:projects(name, id),
-                assigned_user:users(name, email)
-              `)
-              .in("project_id", projectIds)
-          } else {
-            setTasks([])
-            setLoading(false)
-            return
-          }
-        } else {
-          // If user is not creator, fetch tasks from projects they're members of
-          const { data: memberProjects } = await supabase
-            .from("project_members")
-            .select("project_id")
-            .eq("user_id", user.id)
-
-          if (memberProjects && memberProjects.length > 0) {
-            const projectIds = memberProjects.map((mp) => mp.project_id)
-
-            tasksQuery = supabase
-              .from("tasks")
-              .select(`
-                *,
-                project:projects(name, id),
-                assigned_user:users(name, email)
-              `)
-              .in("project_id", projectIds)
-          } else {
-            setTasks([])
-            setLoading(false)
-            return
-          }
+        if (projectIds.length === 0) {
+          setTasks([])
+          return
         }
 
-        const { data: tasksData, error } = await tasksQuery.order("due_date", { ascending: true, nullsLast: true })
+        const { data, error } = await supabase
+          .from("tasks")
+          .select("*, project:projects(name, id), assigned_user:users(name, email)")
+          .in("project_id", projectIds)
+          .order("due_date", { ascending: true, nullsLast: true })
 
         if (error) throw error
-
-        setTasks(tasksData || [])
+        setTasks(data || [])
       } catch (err) {
         console.error("Error fetching tasks:", err)
       } finally {
@@ -107,239 +71,168 @@ export default function TasksPage() {
   }, [])
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "completed":
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />
-      case "in progress":
-        return <Clock className="h-4 w-4 text-blue-500" />
-      case "blocked":
-        return <AlertCircle className="h-4 w-4 text-red-500" />
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />
-    }
+    const s = status.toLowerCase()
+    if (s === "completed") return <CheckCircle2 className="h-4 w-4 text-green-400" />
+    if (s === "in progress") return <Clock className="h-4 w-4 text-yellow-400" />
+    if (s === "blocked") return <AlertCircle className="h-4 w-4 text-red-400" />
+    return <Clock className="h-4 w-4 text-gray-400" />
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "completed":
-        return "bg-green-100 text-green-800"
-      case "in progress":
-        return "bg-blue-100 text-blue-800"
-      case "blocked":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
+    const s = status.toLowerCase()
+    if (s === "completed") return "bg-green-500 text-white"
+    if (s === "in progress") return "bg-yellow-400 text-black"
+    if (s === "blocked") return "bg-red-500 text-white"
+    return "bg-slate-500 text-white"
   }
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "No due date"
     const date = new Date(dateString)
     const now = new Date()
-    const diffTime = date.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
-    if (diffDays < 0) {
-      return `Overdue by ${Math.abs(diffDays)} day(s)`
-    } else if (diffDays === 0) {
-      return "Due today"
-    } else if (diffDays === 1) {
-      return "Due tomorrow"
-    } else {
-      return `Due in ${diffDays} day(s)`
-    }
+    if (diffDays < 0) return `Overdue by ${Math.abs(diffDays)} day(s)`
+    if (diffDays === 0) return "Due today"
+    if (diffDays === 1) return "Due tomorrow"
+    return `Due in ${diffDays} day(s)`
   }
 
   const getDateColor = (dateString: string | null) => {
-    if (!dateString) return "text-gray-500"
+    if (!dateString) return "text-gray-400"
     const date = new Date(dateString)
     const now = new Date()
-    const diffTime = date.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
-    if (diffDays < 0) return "text-red-600"
-    if (diffDays === 0) return "text-orange-600"
-    if (diffDays <= 3) return "text-yellow-600"
-    return "text-gray-500"
+    if (diffDays < 0) return "text-red-400"
+    if (diffDays === 0) return "text-orange-400"
+    if (diffDays <= 3) return "text-yellow-400"
+    return "text-gray-400"
   }
 
-  const filterTasksByStatus = (status: string) => {
-    return tasks.filter((task) => task.status.toLowerCase() === status.toLowerCase())
+  const filterTasks = (type: string) => {
+    if (type === "all") return tasks
+    if (type === "my-tasks") return tasks.filter(t => t.assigned_to === currentUser?.id)
+    return tasks.filter(t => t.status.toLowerCase() === type)
   }
 
-  const getMyTasks = () => {
-    return tasks.filter((task) => task.assigned_to === currentUser?.id)
-  }
+  const tabs = ["all", "my-tasks", "to do", "in progress", "completed", "blocked"]
 
-  const renderTaskCard = (task: Task) => (
-    <Card key={task.id} className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg">{task.title}</CardTitle>
-            <CardDescription className="mt-1">
-              <Link href={`/dashboard/projects/${task.project.id}`} className="text-blue-600 hover:underline">
-                {task.project.name}
-              </Link>
-            </CardDescription>
-          </div>
-          <Badge className={getStatusColor(task.status)}>
-            <span className="flex items-center gap-1">
-              {getStatusIcon(task.status)}
-              {task.status}
-            </span>
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {task.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>}
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
-            {task.due_date && (
-              <div className={`flex items-center gap-1 ${getDateColor(task.due_date)}`}>
-                <Calendar className="h-4 w-4" />
-                <span>{formatDate(task.due_date)}</span>
-              </div>
-            )}
-            {task.assigned_user && (
-              <div className="flex items-center gap-1 text-gray-600">
-                <User className="h-4 w-4" />
-                <span>{task.assigned_user.name}</span>
-              </div>
-            )}
-          </div>
-          <Link href={`/dashboard/projects/${task.project.id}`}>
-            <Button variant="ghost" size="sm">
-              View Project
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  )
-
-  const renderTaskList = (taskList: Task[], emptyMessage: string) => {
-    if (taskList.length === 0) {
-      return (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-10">
-            <p className="mb-4 text-center text-gray-500">{emptyMessage}</p>
-            {currentUser?.isCreator && (
-              <Link href="/dashboard/projects/new">
-                <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create Your First Project
-                </Button>
-              </Link>
-            )}
-          </CardContent>
-        </Card>
-      )
-    }
-
-    return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{taskList.map(renderTaskCard)}</div>
-  }
+  const metrics = useMemo(() => ({
+    total: tasks.length,
+    "my-tasks": tasks.filter(t => t.assigned_to === currentUser?.id).length,
+    "to do": tasks.filter(t => t.status.toLowerCase() === "to do").length,
+    "in progress": tasks.filter(t => t.status.toLowerCase() === "in progress").length,
+    completed: tasks.filter(t => t.status.toLowerCase() === "completed").length,
+    blocked: tasks.filter(t => t.status.toLowerCase() === "blocked").length,
+  }), [tasks, currentUser])
 
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-[#0f172a] to-[#1e293b]">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#22d3ee] border-t-transparent"></div>
       </div>
     )
   }
 
-  const myTasks = getMyTasks()
-  const todoTasks = filterTasksByStatus("to do")
-  const inProgressTasks = filterTasksByStatus("in progress")
-  const completedTasks = filterTasksByStatus("completed")
-  const blockedTasks = filterTasksByStatus("blocked")
+  if (!currentUser) return null
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-        <div className="mt-4 flex space-x-4 sm:mt-0">
-          {currentUser?.isCreator && (
-            <Link href="/dashboard/projects/new">
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                New Project
-              </Button>
-            </Link>
-          )}
-        </div>
+    <div className="space-y-8 bg-gradient-to-br from-[#0f172a] to-[#1e293b] min-h-screen p-8 text-white">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Tasks</h1>
+        {currentUser.isCreator && (
+          <Link href="/dashboard/projects/new">
+            <Button className="bg-cyan-400 hover:bg-cyan-300 text-black">
+              <PlusCircle className="mr-2 h-4 w-4" /> New Project
+            </Button>
+          </Link>
+        )}
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">My Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{myTasks.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">To Do</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todoTasks.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">In Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{inProgressTasks.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Completed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedTasks.length}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {Object.entries(metrics).map(([label, count]) => (
+          <Card key={label} className="bg-[#1e293b] border border-[#334155] rounded-2xl shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-gray-400 capitalize">{label.replace("-", " ")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{count}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Tasks Tabs */}
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Tasks</TabsTrigger>
-          <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
-          <TabsTrigger value="todo">To Do</TabsTrigger>
-          <TabsTrigger value="in-progress">In Progress</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="blocked">Blocked</TabsTrigger>
+      <Tabs defaultValue="all" className="space-y-6">
+        <TabsList className="bg-[#1e293b] border border-[#334155] rounded-xl p-1 flex flex-wrap justify-center gap-2">
+          {tabs.map(tab => (
+            <TabsTrigger key={tab} value={tab} className="text-white data-[state=active]:bg-cyan-400 data-[state=active]:text-black rounded-md px-4 py-2 capitalize">
+              {tab.replace("-", " ")}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="all">
-          {renderTaskList(tasks, "No tasks found. Create a project and add some tasks to get started.")}
-        </TabsContent>
+        {tabs.map(tab => (
+          <TabsContent key={tab} value={tab}>
+            {filterTasks(tab).length > 0 ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filterTasks(tab).map(task => (
+                  <Card key={task.id} className="bg-[#1e293b] border border-[#334155] hover:border-cyan-400 transition-all rounded-xl shadow-md">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg font-semibold">{task.title}</CardTitle>
+                          <CardDescription className="text-blue-400 text-sm">
+                            <Link href={`/dashboard/projects/${task.project.id}`} className="hover:underline">{task.project.name}</Link>
+                          </CardDescription>
+                        </div>
+                        <Badge className={`${getStatusColor(task.status)} rounded-full px-3 py-1 text-xs`}>
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(task.status)} {task.status}
+                          </span>
+                        </Badge>
+                      </div>
+                    </CardHeader>
 
-        <TabsContent value="my-tasks">{renderTaskList(myTasks, "No tasks assigned to you yet.")}</TabsContent>
-
-        <TabsContent value="todo">{renderTaskList(todoTasks, "No tasks in 'To Do' status.")}</TabsContent>
-
-        <TabsContent value="in-progress">
-          {renderTaskList(inProgressTasks, "No tasks in 'In Progress' status.")}
-        </TabsContent>
-
-        <TabsContent value="completed">{renderTaskList(completedTasks, "No completed tasks yet.")}</TabsContent>
-
-        <TabsContent value="blocked">{renderTaskList(blockedTasks, "No blocked tasks.")}</TabsContent>
+                    <CardContent className="space-y-4">
+                      {task.description && (
+                        <p className="text-sm text-gray-400">{task.description}</p>
+                      )}
+                      <div className="flex flex-col gap-2 text-sm">
+                        {task.due_date && (
+                          <div className={`flex items-center gap-1 ${getDateColor(task.due_date)}`}>
+                            <Calendar className="h-4 w-4" /> {formatDate(task.due_date)}
+                          </div>
+                        )}
+                        {task.assigned_user && (
+                          <div className="flex items-center gap-1 text-gray-400">
+                            <User className="h-4 w-4" /> {task.assigned_user.name}
+                          </div>
+                        )}
+                      </div>
+                      <div className="pt-4 flex justify-end">
+                        <Link href={`/dashboard/projects/${task.project.id}`}>
+                          <Button variant="ghost" className="text-cyan-400 hover:text-cyan-300">View</Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <p>No tasks found.</p>
+                {currentUser.isCreator && (
+                  <Link href="/dashboard/projects/new">
+                    <Button className="mt-4 bg-cyan-400 text-black">
+                      <PlusCircle className="mr-2 h-4 w-4" /> Create First Project
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   )
