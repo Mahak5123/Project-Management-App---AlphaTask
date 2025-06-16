@@ -1,16 +1,13 @@
 # AlphaTask
-
 A Jira-like project management application with a custom passcode authentication system.
 
 ## Features
-
 - **Passcode Authentication**: Users register with email and name, and receive a generated passcode  
 - **Project Management**: Create and manage projects with tasks  
 - **Task Management**: Create, assign, and track tasks with status updates  
 - **Team Management**: Project creators can add team members  
 
 ## Tech Stack
-
 - Next.js  
 - React  
 - Tailwind CSS  
@@ -20,14 +17,36 @@ A Jira-like project management application with a custom passcode authentication
 ## Setup Instructions
 
 ### 1. Clone the repository
-
 ```bash
 git clone <repository-url>
 cd AlphaTask
+```
 
 ### 2. Install dependencies
-
 ```bash
 npm install
+```
 
+### 3. Set up environment variables
+Create a `.env.local` file:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
+### 4. Set up Supabase database
+- Create a new project at [supabase.com](https://supabase.com)
+- Run the SQL schema from `/database/schema.sql` in your Supabase SQL editor
+
+### 5. Install shadcn/ui
+```bash
+npx shadcn-ui@latest init
+npx shadcn-ui@latest add button input card dialog table badge select textarea toast form alert
+```
+
+### 6. Run the development server
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
