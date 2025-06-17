@@ -429,10 +429,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Button variant="outline" onClick={handleDeleteProject}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Project
-              </Button>
+              <Button variant="outline" onClick={handleDeleteProject} className="text-black border-white/30 hover:border-white/50">
+  <Trash2 className="mr-2 h-4 w-4 text-black" />
+  Delete Project
+</Button>
+
+
             </>
           ) : (
             <Alert className="w-full md:w-auto">

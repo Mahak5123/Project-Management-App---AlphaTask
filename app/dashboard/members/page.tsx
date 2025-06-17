@@ -5,7 +5,14 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
@@ -17,7 +24,13 @@ import {
 } from "@/components/ui/dialog"
 import { createClient } from "@/lib/supabase/client"
 import { UserPlus, Trash2, Info } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface User {
   id: string
@@ -108,7 +121,12 @@ export default function MembersPage() {
 
       if (error) throw error
 
-      const { data: projectData } = await supabase.from("projects").select("created_by").eq("id", projectId).single()
+      const { data: projectData } = await supabase
+        .from("projects")
+        .select("created_by")
+        .eq("id", projectId)
+        .single()
+
       if (projectData) {
         const { data: creatorData } = await supabase
           .from("users")
@@ -117,7 +135,7 @@ export default function MembersPage() {
           .single()
 
         if (creatorData) {
-          const creatorExists = data?.some((member) => member.user.id === creatorData.id)
+          const creatorExists = data?.some((m) => m.user.id === creatorData.id)
           if (!creatorExists) {
             const creatorMember = {
               project_id: projectId,
@@ -131,6 +149,7 @@ export default function MembersPage() {
           }
         }
       }
+
       setMembers(data || [])
     } catch (err) {
       console.error("Error fetching project members:", err)
@@ -148,14 +167,9 @@ export default function MembersPage() {
     e.preventDefault()
     setError("")
     try {
-      if (!newMemberEmail) {
-        setError("Please enter a valid email.")
-        return
-      }
-      if (!selectedProjectId) {
-        setError("No project selected.")
-        return
-      }
+      if (!newMemberEmail) return setError("Please enter a valid email.")
+      if (!selectedProjectId) return setError("No project selected.")
+
       const supabase = createClient()
       const { data: existingUser, error: userError } = await supabase
         .from("users")
@@ -164,8 +178,7 @@ export default function MembersPage() {
         .single()
 
       if (userError || !existingUser) {
-        setError("User not found in the system.")
-        return
+        return setError("User not found in the system.")
       }
 
       const { data: existingMember } = await supabase
@@ -175,10 +188,7 @@ export default function MembersPage() {
         .eq("user_id", existingUser.id)
         .single()
 
-      if (existingMember) {
-        setError("This user already exists in the project.")
-        return
-      }
+      if (existingMember) return setError("This user already exists in the project.")
 
       const { error: insertError } = await supabase.from("project_members").insert([
         { project_id: selectedProjectId, user_id: existingUser.id, role: "member" },
@@ -198,11 +208,9 @@ export default function MembersPage() {
   const handleRemoveMember = async (projectId: string, userId: string) => {
     if (!confirm("Are you sure you want to remove this member?")) return
     try {
-      const memberToRemove = members.find((member) => member.user.id === userId)
-      if (memberToRemove?.role === "creator") {
-        setError("You cannot remove the project owner.")
-        return
-      }
+      const memberToRemove = members.find((m) => m.user.id === userId)
+      if (memberToRemove?.role === "creator") return setError("You cannot remove the project owner.")
+
       const supabase = createClient()
       const { error } = await supabase
         .from("project_members")
@@ -220,18 +228,18 @@ export default function MembersPage() {
   if (loading && !members.length) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-[#020c1b] to-[#0f172a]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#38bdf8] border-t-transparent"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#38bdf8] border-t-transparent" />
       </div>
     )
   }
 
   if (!isCreator) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-[#020c1b] to-[#0f172a]">
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-[#020c1b] to-[#0f172a] text-white">
         <Card className="w-full max-w-md backdrop-blur-xl bg-white/10 border border-white/20 text-white shadow-xl">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-[#38bdf8]">Unauthorized Access</CardTitle>
-            <CardDescription>Only project owners have permission to manage collaborators.</CardDescription>
+            <CardDescription>Only project owners can manage collaborators.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -245,10 +253,11 @@ export default function MembersPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-4">
+        {/* Project Picker */}
         <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-[#38bdf8] drop-shadow-lg">Choose Project</CardTitle>
-            <CardDescription>Select a project to modify its team</CardDescription>
+            <CardTitle className="text-xl font-bold text-[#38bdf8]">Choose Project</CardTitle>
+            <CardDescription>Select a project to manage its team</CardDescription>
           </CardHeader>
           <CardContent>
             <Select value={selectedProjectId} onValueChange={handleProjectChange}>
@@ -265,6 +274,7 @@ export default function MembersPage() {
         </Card>
 
         <div className="grid gap-4 md:grid-cols-2">
+          {/* Invite Member */}
           <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-bold text-[#38bdf8]">Invite Member</CardTitle>
@@ -278,7 +288,7 @@ export default function MembersPage() {
                 </div>
                 <Alert className="bg-yellow-200/20 border-yellow-300/20 text-yellow-100 flex items-start gap-3 p-4 w-full rounded-md">
                   <Info className="h-5 w-5 mt-1" />
-                  <span>Only <span className="text-[#FFD700] font-bold">existing registered users</span> can be invited.</span>
+                  <span>Only <span className="text-[#FFD700] font-bold">registered users</span> can be invited.</span>
                 </Alert>
               </form>
             </CardContent>
@@ -289,6 +299,7 @@ export default function MembersPage() {
             </CardFooter>
           </Card>
 
+          {/* Current Members */}
           <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-bold text-[#38bdf8]">Current Team</CardTitle>
@@ -315,13 +326,14 @@ export default function MembersPage() {
         </div>
       </div>
 
+      {/* Member Added Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-[#0f172a] text-white border border-white/20">
           <DialogHeader>
             <DialogTitle>New Member Added</DialogTitle>
-            <DialogDescription>{addedMember?.name} has been successfully added to your team.</DialogDescription>
+            <DialogDescription>{addedMember?.name} has been successfully added.</DialogDescription>
           </DialogHeader>
-          <div className="p-4 bg-white/10 rounded-md">
+          <div className="p-4 bg-white/10 rounded-md space-y-2">
             <p><b>Name:</b> {addedMember?.name}</p>
             <p><b>Email:</b> {addedMember?.email}</p>
           </div>
