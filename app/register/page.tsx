@@ -18,7 +18,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [passcode, setPasscode] = useState("")
+  const [accessKey, setAccessKey] = useState("")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,11 +28,11 @@ export default function Register() {
 
     try {
       if (!name || !email) {
-        throw new Error("Name and email are required")
+        throw new Error("Full name and email address are required")
       }
 
-      const newPasscode = generatePasscode()
-      setPasscode(newPasscode)
+      const newAccessKey = generatePasscode()
+      setAccessKey(newAccessKey)
 
       const supabase = createClient()
 
@@ -50,7 +50,7 @@ export default function Register() {
           {
             name,
             email,
-            passcode: newPasscode,
+            passcode: newAccessKey,
             is_creator: isCreator,
           },
         ])
@@ -62,7 +62,7 @@ export default function Register() {
 
       setSuccess(true)
     } catch (err: any) {
-      setError(err.message || "Failed to register. Please try again.")
+      setError(err.message || "Registration failed. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -75,9 +75,9 @@ export default function Register() {
           <div className="flex items-center justify-center mb-4">
             <h1 className="text-3xl font-extrabold text-[#22d3ee]">AlphaTask</h1>
           </div>
-          <CardTitle className="text-2xl text-center text-slate-100">Create an account</CardTitle>
+          <CardTitle className="text-2xl text-center text-slate-100">Join AlphaTask</CardTitle>
           <CardDescription className="text-center text-slate-400">
-            Enter your information to get started
+            Complete the form below to create your account
           </CardDescription>
         </CardHeader>
 
@@ -86,17 +86,17 @@ export default function Register() {
             <div className="space-y-4">
               <Alert className="bg-green-50/10 border-green-200/20">
                 <AlertDescription className="text-green-400">
-                  Account created successfully! Your passcode is:
+                  Registration completed! Your unique access key is:
                 </AlertDescription>
               </Alert>
               <div className="p-4 bg-white/10 rounded-md text-center text-slate-100">
-                <p className="text-2xl font-mono tracking-wider">{passcode}</p>
+                <p className="text-2xl font-mono tracking-wider">{accessKey}</p>
               </div>
               <p className="text-sm text-slate-400 text-center">
-                Please save this passcode. You will need it to log in.
+                Store this access key safely. You'll need it for future logins.
               </p>
               <Button className="w-full bg-[#22d3ee] text-black hover:bg-[#0ec2da]" onClick={() => router.push("/login")}>
-                Continue to Login
+                Proceed to Login
               </Button>
             </div>
           ) : (
@@ -107,28 +107,28 @@ export default function Register() {
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-100">Full Name</Label>
+                <Label htmlFor="name" className="text-slate-100">Your Name</Label>
                 <Input
                   id="name"
-                  placeholder="Enter your name"
+                  placeholder="Type your full name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-100">Email</Label>
+                <Label htmlFor="email" className="text-slate-100">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Type your email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <Button type="submit" className="w-full bg-[#22d3ee] text-black hover:bg-[#0ec2da]" disabled={loading}>
-                {loading ? "Creating Account..." : "Register"}
+                {loading ? "Setting up your account..." : "Create Account"}
               </Button>
             </form>
           )}
@@ -137,9 +137,9 @@ export default function Register() {
         {!success && (
           <CardFooter className="flex justify-center">
             <div className="text-sm text-slate-400">
-              Already have an account?{" "}
+              Have an account already?{" "}
               <Link href="/login" className="text-[#22d3ee] hover:underline">
-                Login
+                Sign in here
               </Link>
             </div>
           </CardFooter>
